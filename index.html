@@ -223,6 +223,38 @@
             transform: scale(0.98);
         }
 
+        .quantity-selector {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 15px 0 10px 0;
+            flex-wrap: wrap;
+        }
+
+        .quantity-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 15px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .quantity-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .quantity-btn.active {
+            background: linear-gradient(45deg, #10ac84, #1dd1a1);
+            color: white;
+            border-color: #10ac84;
+            box-shadow: 0 4px 15px rgba(16, 172, 132, 0.4);
+        }
+
         .cards-reveal {
             position: fixed;
             top: 0;
@@ -594,6 +626,14 @@
                 <h2>🥉 Bronze</h2>
                 <div class="info">4 cartes</div>
                 <div class="info">Rareté: 1/79,079</div>
+                <div class="quantity-selector">
+                    <button class="quantity-btn active" onclick="selectQuantity(this, 'bronze', 1)">1</button>
+                    <button class="quantity-btn" onclick="selectQuantity(this, 'bronze', 5)">5</button>
+                    <button class="quantity-btn" onclick="selectQuantity(this, 'bronze', 10)">10</button>
+                    <button class="quantity-btn" onclick="selectQuantity(this, 'bronze', 30)">30</button>
+                    <button class="quantity-btn" onclick="selectQuantity(this, 'bronze', 50)">50</button>
+                    <button class="quantity-btn" onclick="selectQuantity(this, 'bronze', 100)">100</button>
+                </div>
                 <button onclick="openBooster(4, 'Bronze')">Ouvrir</button>
             </div>
             <div class="booster silver">
@@ -661,6 +701,18 @@
 
         let attempts = 0;
         let wins = 0;
+        let quantities = {
+            bronze: 1,
+            silver: 1,
+            gold: 1
+        };
+
+        function selectQuantity(btn, boosterType, quantity) {
+            const parent = btn.parentElement;
+            parent.querySelectorAll('.quantity-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            quantities[boosterType] = quantity;
+        }
 
         function drawCards(count) {
             const cards = [];
@@ -686,19 +738,67 @@
         }
 
         function openBooster(cardCount, boosterName) {
-            attempts++;
-            const cards = drawCards(cardCount);
-            const quadCard = checkForQuad(cards);
+            const boosterType = boosterName.toLowerCase();
+            const quantity = quantities[boosterType];
             
-            if (quadCard) {
-                wins++;
+            let totalWins = 0;
+            let allQuadCards = [];
+            
+            for (let i = 0; i < quantity; i++) {
+                attempts++;
+                const cards = drawCards(cardCount);
+                const quadCard = checkForQuad(cards);
+                
+                if (quadCard) {
+                    wins++;
+                    totalWins++;
+                    allQuadCards.push(quadCard);
+                }
             }
             
             updateStats();
-            displayCards(cards, quadCard, boosterName);
+            displayResults(quantity, totalWins, allQuadCards, boosterName);
         }
 
-        function displayCards(cards, quadCard, boosterName) {
+        function openBooster(cardCount, boosterName) {
+            const boosterType = boosterName.toLowerCase();
+            const quantity = quantities[boosterType];
+            
+            if (quantity === 1) {
+                // Tirage simple - affiche les cartes
+                attempts++;
+                const cards = drawCards(cardCount);
+                const quadCard = checkForQuad(cards);
+                
+                if (quadCard) {
+                    wins++;
+                }
+                
+                updateStats();
+                displaySingleDraw(cards, quadCard, boosterName);
+            } else {
+                // Tirages multiples - affiche le résumé
+                let totalWins = 0;
+                let allQuadCards = [];
+                
+                for (let i = 0; i < quantity; i++) {
+                    attempts++;
+                    const cards = drawCards(cardCount);
+                    const quadCard = checkForQuad(cards);
+                    
+                    if (quadCard) {
+                        wins++;
+                        totalWins++;
+                        allQuadCards.push(quadCard);
+                    }
+                }
+                
+                updateStats();
+                displayMultipleDraws(quantity, totalWins, allQuadCards, boosterName);
+            }
+        }
+
+        function displaySingleDraw(cards, quadCard, boosterName) {
             const container = document.getElementById('cardsContainer');
             const resultMessage = document.getElementById('resultMessage');
             container.innerHTML = '';
@@ -731,6 +831,95 @@
                     container.appendChild(cardDiv);
                 }, index * 100);
             });
+
+            document.getElementById('cardsReveal').classList.add('active');
+        }
+
+        function displayMultipleDraws(quantity, totalWins, allQuadCards, boosterName) {
+            const container = document.getElementById('cardsContainer');
+            const resultMessage = document.getElementById('resultMessage');
+            container.innerHTML = '';
+
+            if (totalWins > 0) {
+                resultMessage.textContent = `🎉 ${totalWins} CARRÉ${totalWins > 1 ? 'S' : ''} sur ${quantity} tirages !`;
+                resultMessage.className = 'result-message win';
+            } else {
+                resultMessage.textContent = `Pas de carré sur ${quantity} tirages...`;
+                resultMessage.className = 'result-message lose';
+            }
+
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.cssText = `
+                background: rgba(0, 0, 0, 0.7);
+                padding: 30px;
+                border-radius: 20px;
+                backdrop-filter: blur(10px);
+                border: 2px solid rgba(255, 215, 0, 0.3);
+                font-size: 1.3em;
+                line-height: 2;
+                max-width: 800px;
+                margin: 0 auto;
+            `;
+            
+            summaryDiv.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <strong>📊 Résumé de ${quantity} tirages ${boosterName}</strong>
+                </div>
+                <div style="color: #10ac84;">
+                    ✅ Carrés gagnés: <strong>${totalWins}</strong>
+                </div>
+                <div style="color: #ff6b9d;">
+                    ❌ Échecs: <strong>${quantity - totalWins}</strong>
+                </div>
+                <div style="color: #ffd700; margin-top: 15px;">
+                    📈 Taux de réussite: <strong>${((totalWins / quantity) * 100).toFixed(1)}%</strong>
+                </div>
+            `;
+            
+            container.appendChild(summaryDiv);
+
+            // Affichage visuel des cartes gagnantes
+            if (allQuadCards.length > 0) {
+                const winningCardsDiv = document.createElement('div');
+                winningCardsDiv.style.cssText = `
+                    margin-top: 30px;
+                    text-align: center;
+                `;
+                
+                const titleDiv = document.createElement('div');
+                titleDiv.style.cssText = `
+                    font-size: 1.5em;
+                    font-weight: bold;
+                    margin-bottom: 20px;
+                    color: #ffd700;
+                `;
+                titleDiv.textContent = '🏆 Cartes Gagnantes';
+                winningCardsDiv.appendChild(titleDiv);
+
+                const cardsGrid = document.createElement('div');
+                cardsGrid.style.cssText = `
+                    display: flex;
+                    gap: 20px;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                `;
+
+                allQuadCards.forEach((cardNum, index) => {
+                    setTimeout(() => {
+                        const cardDiv = document.createElement('div');
+                        cardDiv.className = 'card is-quad';
+                        
+                        cardDiv.innerHTML = `
+                            <img src="${cardImages[cardNum]}" alt="Carte ${cardNum}">
+                            <div class="card-count">4x</div>
+                        `;
+                        cardsGrid.appendChild(cardDiv);
+                    }, index * 100);
+                });
+
+                winningCardsDiv.appendChild(cardsGrid);
+                container.appendChild(winningCardsDiv);
+            }
 
             document.getElementById('cardsReveal').classList.add('active');
         }
