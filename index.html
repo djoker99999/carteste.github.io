@@ -762,7 +762,7 @@
 
         function openBooster(cardCount, boosterName) {
             const boosterType = boosterName.toLowerCase();
-            const quantity = quantities[boosterType];
+            const quantity = quantities[boosterType] || 1;
             
             if (quantity === 1) {
                 // Tirage simple - affiche les cartes
@@ -777,9 +777,9 @@
                 updateStats();
                 displaySingleDraw(cards, quadCard, boosterName);
             } else {
-                // Tirages multiples - affiche le résumé
+                // Tirages multiples - affiche tous les tirages
                 let totalWins = 0;
-                let allQuadCards = [];
+                let allDraws = [];
                 
                 for (let i = 0; i < quantity; i++) {
                     attempts++;
@@ -789,12 +789,13 @@
                     if (quadCard) {
                         wins++;
                         totalWins++;
-                        allQuadCards.push(quadCard);
                     }
+                    
+                    allDraws.push({ cards, quadCard });
                 }
                 
                 updateStats();
-                displayMultipleDraws(quantity, totalWins, allQuadCards, boosterName);
+                displayMultipleDraws(quantity, totalWins, allDraws, boosterName);
             }
         }
 
@@ -835,7 +836,7 @@
             document.getElementById('cardsReveal').classList.add('active');
         }
 
-        function displayMultipleDraws(quantity, totalWins, allQuadCards, boosterName) {
+        function displayMultipleDraws(quantity, totalWins, allDraws, boosterName) {
             const container = document.getElementById('cardsContainer');
             const resultMessage = document.getElementById('resultMessage');
             container.innerHTML = '';
@@ -851,76 +852,100 @@
             const summaryDiv = document.createElement('div');
             summaryDiv.style.cssText = `
                 background: rgba(0, 0, 0, 0.7);
-                padding: 30px;
+                padding: 20px 30px;
                 border-radius: 20px;
                 backdrop-filter: blur(10px);
                 border: 2px solid rgba(255, 215, 0, 0.3);
-                font-size: 1.3em;
-                line-height: 2;
+                font-size: 1.2em;
+                line-height: 1.8;
                 max-width: 800px;
-                margin: 0 auto;
+                margin: 0 auto 30px auto;
+                display: flex;
+                gap: 30px;
+                justify-content: center;
+                flex-wrap: wrap;
             `;
             
             summaryDiv.innerHTML = `
-                <div style="margin-bottom: 20px;">
-                    <strong>📊 Résumé de ${quantity} tirages ${boosterName}</strong>
-                </div>
                 <div style="color: #10ac84;">
-                    ✅ Carrés gagnés: <strong>${totalWins}</strong>
+                    ✅ Carrés: <strong>${totalWins}</strong>
                 </div>
                 <div style="color: #ff6b9d;">
                     ❌ Échecs: <strong>${quantity - totalWins}</strong>
                 </div>
-                <div style="color: #ffd700; margin-top: 15px;">
-                    📈 Taux de réussite: <strong>${((totalWins / quantity) * 100).toFixed(1)}%</strong>
+                <div style="color: #ffd700;">
+                    📈 Réussite: <strong>${((totalWins / quantity) * 100).toFixed(1)}%</strong>
                 </div>
             `;
             
             container.appendChild(summaryDiv);
 
-            // Affichage visuel des cartes gagnantes
-            if (allQuadCards.length > 0) {
-                const winningCardsDiv = document.createElement('div');
-                winningCardsDiv.style.cssText = `
-                    margin-top: 30px;
-                    text-align: center;
-                `;
-                
-                const titleDiv = document.createElement('div');
-                titleDiv.style.cssText = `
-                    font-size: 1.5em;
-                    font-weight: bold;
-                    margin-bottom: 20px;
-                    color: #ffd700;
-                `;
-                titleDiv.textContent = '🏆 Cartes Gagnantes';
-                winningCardsDiv.appendChild(titleDiv);
+            // Affichage de tous les tirages
+            const allDrawsContainer = document.createElement('div');
+            allDrawsContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 25px;
+                margin-top: 20px;
+            `;
 
-                const cardsGrid = document.createElement('div');
-                cardsGrid.style.cssText = `
-                    display: flex;
-                    gap: 20px;
-                    flex-wrap: wrap;
-                    justify-content: center;
-                `;
+            allDraws.forEach((draw, drawIndex) => {
+                setTimeout(() => {
+                    const drawDiv = document.createElement('div');
+                    drawDiv.style.cssText = `
+                        background: rgba(0, 0, 0, 0.6);
+                        padding: 20px;
+                        border-radius: 15px;
+                        border: 2px solid ${draw.quadCard ? 'rgba(255, 215, 0, 0.5)' : 'rgba(255, 255, 255, 0.2)'};
+                        backdrop-filter: blur(5px);
+                    `;
 
-                allQuadCards.forEach((cardNum, index) => {
-                    setTimeout(() => {
-                        const cardDiv = document.createElement('div');
-                        cardDiv.className = 'card is-quad';
-                        
-                        cardDiv.innerHTML = `
-                            <img src="${cardImages[cardNum]}" alt="Carte ${cardNum}">
-                            <div class="card-count">4x</div>
-                        `;
-                        cardsGrid.appendChild(cardDiv);
-                    }, index * 100);
-                });
+                    const drawTitle = document.createElement('div');
+                    drawTitle.style.cssText = `
+                        font-size: 1.3em;
+                        font-weight: bold;
+                        margin-bottom: 15px;
+                        color: ${draw.quadCard ? '#ffd700' : '#fff'};
+                        text-align: center;
+                    `;
+                    drawTitle.textContent = draw.quadCard ? `🏆 Tirage #${drawIndex + 1} - CARRÉ !` : `Tirage #${drawIndex + 1}`;
+                    drawDiv.appendChild(drawTitle);
 
-                winningCardsDiv.appendChild(cardsGrid);
-                container.appendChild(winningCardsDiv);
-            }
+                    const cardsRow = document.createElement('div');
+                    cardsRow.style.cssText = `
+                        display: flex;
+                        gap: 15px;
+                        flex-wrap: wrap;
+                        justify-content: center;
+                    `;
 
+                    const cardCounts = {};
+                    draw.cards.forEach(card => {
+                        cardCounts[card] = (cardCounts[card] || 0) + 1;
+                    });
+
+                    draw.cards.forEach((cardNum, cardIndex) => {
+                        setTimeout(() => {
+                            const cardDiv = document.createElement('div');
+                            cardDiv.className = 'card';
+                            if (draw.quadCard === cardNum) {
+                                cardDiv.classList.add('is-quad');
+                            }
+                            
+                            cardDiv.innerHTML = `
+                                <img src="${cardImages[cardNum]}" alt="Carte ${cardNum}">
+                                <div class="card-count">${cardCounts[cardNum]}x</div>
+                            `;
+                            cardsRow.appendChild(cardDiv);
+                        }, cardIndex * 50);
+                    });
+
+                    drawDiv.appendChild(cardsRow);
+                    allDrawsContainer.appendChild(drawDiv);
+                }, drawIndex * 200);
+            });
+
+            container.appendChild(allDrawsContainer);
             document.getElementById('cardsReveal').classList.add('active');
         }
 
